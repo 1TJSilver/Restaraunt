@@ -1,6 +1,4 @@
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 
 public class Main {
@@ -8,6 +6,7 @@ public class Main {
         final int CLIENTS_TODAY = 5;
         final int COOKING_TIME = 2500;
         final int CHOICE_TIME = 1000;
+        final int EATING_TIME = 1500;
 
         Queue<String> orders = new LinkedList<>();
         Queue<String> clientQueue = new LinkedList<>();
@@ -28,19 +27,15 @@ public class Main {
                     orders.notify();
                 }
             }
+            System.out.println("Chef " + Thread.currentThread().getName() + ": I'm leaving");
         };
 
         Runnable waiterLogic = () -> {
             String order;
-            for (int i = 0; i < CLIENTS_TODAY; i++) {
+            int clientsServed = 0;
+            while (clientsServed < CLIENTS_TODAY){
                 synchronized (clientQueue) {
-                    if (clientQueue.isEmpty()) {
-                        try {
-                            clientQueue.wait();
-                        } catch (InterruptedException ex) {
-                            System.out.println(ex.getMessage());
-                        }
-                    }
+                    if (clientQueue.isEmpty()) continue;
                     order = clientQueue.poll();
                     System.out.println("Waiter " + Thread.currentThread().getName() + " get order from " + order);
                 }
@@ -55,9 +50,11 @@ public class Main {
                 }
                 synchronized (clientQueue) {
                     System.out.println("Waiter delivered a dish for " + order);
+                    clientsServed++;
                     clientQueue.notify();
                 }
             }
+            System.out.println("Waiter " + Thread.currentThread().getName() + ": I'm leaving");
         };
 
         Runnable clientLogic = () -> {
@@ -66,14 +63,14 @@ public class Main {
                 synchronized (clientQueue) {
                     Thread.sleep(CHOICE_TIME);
                     clientQueue.add(Thread.currentThread().getName());
-
-                    clientQueue.notify();
                     clientQueue.wait();
                     System.out.println(Thread.currentThread().getName() + ": Om-nom-nom");
+                    Thread.sleep(EATING_TIME);
                 }
             } catch (InterruptedException ex) {
                 System.out.println(ex.getMessage());
             }
+            System.out.println(Thread.currentThread().getName() + ": I'm leaving");
         };
         ThreadGroup group = new ThreadGroup("Group");
 
@@ -84,5 +81,18 @@ public class Main {
         new Thread(group, clientLogic).start();
         new Thread(group, clientLogic).start();
         new Thread(group, clientLogic).start();
+
+        waitAndFinish(group);
+    }
+    public static void waitAndFinish (ThreadGroup group){
+        while (group.activeCount() > 0){
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException ex){
+                System.out.println(ex.getMessage());
+            }
+        }
+        System.out.println(group.getName() + " is end");
+        group.interrupt();
     }
 }
