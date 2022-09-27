@@ -1,19 +1,24 @@
-import java.util.LinkedList;
-import java.util.Queue;
-
 public class Chef extends Thread{
-    protected Queue<String> orderList = new LinkedList<>();
-    private Chef(String name) {
-        super(name);
+    public Chef(ThreadGroup group, String name){
+        super(group, name);
     }
-
-    @Override
+   @Override
     public void run() {
-        while (!isInterrupted()){
-
-        }
-    }
-    public void addOrder(String order){
-        orderList.add(order);
+       for (int i = 0; i < Main.CLIENTS_TODAY; i++) {
+           synchronized (Main.orders) {
+               try {
+                   if (Main.orders.isEmpty()) {
+                       Main.orders.wait();
+                   }
+                   System.out.println("Cooking a dish");
+                   Thread.sleep(Main.COOKING_TIME);
+                   System.out.println("Chef cook a dish for " + Main.orders.poll());
+               } catch (InterruptedException ex) {
+                   System.out.println(ex.getMessage());
+               }
+               Main.orders.notify();
+           }
+       }
+       System.out.println("Chef " + Thread.currentThread().getName() + ": I'm leaving");
     }
 }
